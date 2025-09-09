@@ -2,12 +2,13 @@
  * OpenAI Stream node executor
  * Handles streaming chat completions from OpenAI
  */
-import { getPlatformDependencies, type NodeExecutionContext, type ValidationResult } from "../../platform";
+import { getPlatformDependencies, type NodeExecutionContext, type ValidationResult } from "@gravityai-dev/plugin-base";
 import { streamCompletion } from "../service/streaming";
+
+import { OpenAIStreamConfig, StreamingMetadata, OpenAIStreamOutput } from "../util/types";
 
 // Get platform dependencies
 const { PromiseNode } = getPlatformDependencies();
-import { OpenAIStreamConfig, StreamingMetadata, OpenAIStreamOutput } from "../util/types";
 
 export default class OpenAIStreamExecutor extends PromiseNode<OpenAIStreamConfig> {
   constructor() {

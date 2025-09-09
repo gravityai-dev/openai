@@ -2,7 +2,7 @@
  * OpenAI Streaming Service
  */
 
-import { getPlatformDependencies } from "../../platform";
+import { getPlatformDependencies } from "@gravityai-dev/plugin-base";
 import { getMessageChunkPublisher } from "@gravityai-dev/gravity-server";
 import OpenAI from "openai";
 import { OpenAIStreamConfig, StreamingMetadata, StreamUsageStats, OpenAICredentials } from "../util/types";

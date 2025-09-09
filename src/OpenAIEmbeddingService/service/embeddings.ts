@@ -4,7 +4,7 @@
  */
 
 import OpenAI from "openai";
-import { getPlatformDependencies } from "../../platform";
+import { getPlatformDependencies } from "@gravityai-dev/plugin-base";
 import { OpenAIEmbeddingOptions, OpenAIEmbeddingResponse } from "../util/types";
 
 type CredentialContext = any;

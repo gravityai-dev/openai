@@ -1,4 +1,4 @@
-import { getPlatformDependencies, type NodeExecutionContext } from "../../platform";
+import { getPlatformDependencies, type NodeExecutionContext } from "@gravityai-dev/plugin-base";
 import { OpenAIEmbeddingServiceConfig } from "../util/types";
 
 // Get platform dependencies

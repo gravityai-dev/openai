@@ -3,14 +3,14 @@
  * Provides AI text generation capabilities using OpenAI's GPT models
  */
 
-import { getPlatformDependencies, type EnhancedNodeDefinition } from "../../platform";
+import { getPlatformDependencies, type EnhancedNodeDefinition } from "@gravityai-dev/plugin-base";
 import OpenAIExecutor from "./executor";
 
-// Get platform dependencies for runtime values
-const platform = getPlatformDependencies();
-const { NodeInputType, NodeConcurrency } = platform;
-
-const definition: EnhancedNodeDefinition = {
+// Export a function that creates the definition after platform deps are set
+export function createNodeDefinition(): EnhancedNodeDefinition {
+  const { NodeInputType } = getPlatformDependencies();
+  
+  return {
   type: "OpenAI",
   isService: false,
   name: "OpenAI",
@@ -106,7 +106,11 @@ const definition: EnhancedNodeDefinition = {
   capabilities: {
     isTrigger: false,
   },
-};
+  };
+}
+
+// Create and export the node
+const definition = createNodeDefinition();
 
 // Export as enhanced node
 export const OpenAINode = {

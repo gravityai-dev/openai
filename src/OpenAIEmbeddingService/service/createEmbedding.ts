@@ -4,7 +4,7 @@
  */
 
 import { createEmbedding as createOpenAIEmbedding } from "./embeddings";
-import { getPlatformDependencies, type NodeExecutionContext } from "../../platform";
+import { getPlatformDependencies, type NodeExecutionContext } from "@gravityai-dev/plugin-base";
 import { CreateEmbeddingParams, OpenAIEmbeddingServiceConfig as OpenAIEmbeddingConfig } from "../util/types";
 
 // The config passed from ServiceRegistry contains the full node data

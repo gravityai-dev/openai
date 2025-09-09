@@ -3,12 +3,12 @@
  * Provides streaming text generation capabilities
  */
 
-import { getPlatformDependencies, type EnhancedNodeDefinition } from "../../platform";
+import { getPlatformDependencies, type EnhancedNodeDefinition } from "@gravityai-dev/plugin-base";
 import { SYSTEM_CHANNEL, AI_RESULT_CHANNEL, QUERY_MESSAGE_CHANNEL } from "@gravityai-dev/gravity-server";
+import OpenAIStreamExecutor from "./executor";
 
 // Get platform dependencies
 const { NodeInputType, NodeConcurrency } = getPlatformDependencies();
-import OpenAIStreamExecutor from "./executor";
 
 const definition: EnhancedNodeDefinition = {
   type: "OpenAIStream",

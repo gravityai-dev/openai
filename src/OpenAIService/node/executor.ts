@@ -2,7 +2,7 @@
  * OpenAI Service Node Executor
  * Handles service calls for LLM operations
  */
-import { getPlatformDependencies, type NodeExecutionContext } from "../../platform";
+import { getPlatformDependencies, type NodeExecutionContext } from "@gravityai-dev/plugin-base";
 import { queryChatGPT } from "../../OpenAI/service/queryChatGPT";
 import { OpenAIServiceConfig } from "../util/types";
 

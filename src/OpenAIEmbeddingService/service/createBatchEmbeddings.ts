@@ -3,7 +3,7 @@
  */
 
 import { createEmbedding } from "./embeddings";
-import { getPlatformDependencies, type NodeExecutionContext } from "../../platform";
+import { getPlatformDependencies, type NodeExecutionContext } from "@gravityai-dev/plugin-base";
 import { CreateBatchEmbeddingsParams, OpenAIEmbeddingServiceConfig as OpenAIEmbeddingConfig } from "../util/types";
 
 /**

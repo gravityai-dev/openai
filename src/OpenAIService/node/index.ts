@@ -11,7 +11,7 @@
  * - Always available for service calls
  */
 
-import { type EnhancedNodeDefinition } from "../../platform";
+import { type EnhancedNodeDefinition } from "@gravityai-dev/plugin-base";
 import OpenAIServiceExecutor from "./executor";
 
 const definition: EnhancedNodeDefinition = {

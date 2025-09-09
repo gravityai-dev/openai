@@ -3,7 +3,7 @@
  * Handles text generation using OpenAI's GPT models
  */
 
-import { getPlatformDependencies, type NodeExecutionContext, type ValidationResult } from "../../platform";
+import { getPlatformDependencies, type NodeExecutionContext, type ValidationResult } from "@gravityai-dev/plugin-base";
 import { queryChatGPT } from "../service/queryChatGPT";
 import { validateOpenAIConfig } from "../util/validation";
 import { OpenAIConfig, OpenAIOutput } from "../util/types";

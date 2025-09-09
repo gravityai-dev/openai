@@ -1,7 +1,4 @@
-import { getPlatformDependencies, type EnhancedNodeDefinition } from "../../platform";
-
-// Get platform dependencies
-const { NodeInputType } = getPlatformDependencies();
+import { getPlatformDependencies, type EnhancedNodeDefinition } from "@gravityai-dev/plugin-base";
 import OpenAIEmbeddingServiceExecutor from "./executor";
 
 /**
