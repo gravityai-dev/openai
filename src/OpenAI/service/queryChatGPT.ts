@@ -3,6 +3,7 @@
  * Handles all OpenAI API interactions with proper credential management
  */
 
+import OpenAI from "openai";
 import {
   OpenAIConfig,
   OpenAIMessage,
@@ -10,21 +11,12 @@ import {
   OpenAICompletionResponse,
   OpenAICredentials,
 } from "../util/types";
-// import { saveTokenUsage } from "../simpleTokenTracker";
+import { getNodeCredentials, saveTokenUsage, openAILogger as logger } from "../../shared/platform";
 
-// Temporary placeholders for platform dependencies
-const logger = { info: console.log, error: console.error, debug: console.debug };
 type CredentialContext = any;
-const getNodeCredentials = (context: any, key: string) => {
-  throw new Error("getNodeCredentials not implemented");
-};
-const saveTokenUsage = async (...args: any[]) => {
-  console.log("saveTokenUsage called", args);
-};
 
 /**
  * Generate a completion using OpenAI's chat API
- * Handles credential fetching internally following Pattern A
  */
 export async function queryChatGPT(
   config: OpenAIConfig,
@@ -82,27 +74,17 @@ export async function queryChatGPT(
       maxTokens: config.maxTokens,
     });
 
-    // Make API call
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-        ...(organizationId && { "OpenAI-Organization": organizationId }),
-      },
-      body: JSON.stringify(requestBody),
+    // Initialize OpenAI client
+    const openai = new OpenAI({
+      apiKey,
+      baseURL: baseUrl,
+      ...(organizationId && { organization: organizationId }),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      log.error("OpenAI API error", {
-        status: response.status,
-        error: errorText,
-      });
-      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
-    }
-
-    const data = (await response.json()) as OpenAICompletionResponse;
+    // Make API call using the OpenAI library
+    const response = await openai.chat.completions.create(requestBody);
+    
+    const data = response as OpenAICompletionResponse;
 
     const generatedText = data.choices[0]?.message?.content || "";
 

@@ -4,7 +4,7 @@
  */
 
 import OpenAI from "openai";
-import { getPlatformDependencies } from "@gravityai-dev/plugin-base";
+import { getNodeCredentials, saveTokenUsage, embeddingLogger as logger } from "../../shared/platform";
 import { OpenAIEmbeddingOptions, OpenAIEmbeddingResponse } from "../util/types";
 
 type CredentialContext = any;
@@ -18,7 +18,7 @@ function normalizeVector(vector: number[]): number[] {
 }
 
 /**
- * Create an embedding using OpenAI's API
+ * Create a single embedding using OpenAI's API
  */
 export async function createEmbedding(
   text: string,
@@ -26,9 +26,6 @@ export async function createEmbedding(
   credentialContext: CredentialContext,
   executionContext?: { workflowId: string; executionId: string; nodeId: string }
 ): Promise<OpenAIEmbeddingResponse> {
-  const { getNodeCredentials, createLogger, saveTokenUsage } = getPlatformDependencies();
-  const logger = createLogger("OpenAIEmbeddingsService");
-
   try {
     // Get OpenAI credentials
     const credentials = await getNodeCredentials(credentialContext, "openaiCredential");
@@ -103,6 +100,60 @@ export async function createEmbedding(
     logger.error("Failed to create OpenAI embedding", {
       error: error instanceof Error ? error.message : String(error),
       model: options.model,
+    });
+    throw error;
+  }
+}
+
+/**
+ * Create batch embeddings using OpenAI's API
+ */
+export async function createBatchEmbeddings(
+  texts: string[],
+  options: OpenAIEmbeddingOptions,
+  credentialContext: CredentialContext,
+  executionContext?: { workflowId: string; executionId: string; nodeId: string }
+): Promise<{ embeddings: OpenAIEmbeddingResponse[]; totalUsage: { prompt_tokens: number; total_tokens: number } }> {
+  try {
+    // Get OpenAI credentials
+    const credentials = await getNodeCredentials(credentialContext, "openaiCredential");
+
+    if (!credentials?.apiKey) {
+      throw new Error("OpenAI API key not found in credentials");
+    }
+
+    // Process texts in batches to avoid rate limits
+    const batchSize = 100;
+    const results: OpenAIEmbeddingResponse[] = [];
+    let totalUsage = { prompt_tokens: 0, total_tokens: 0 };
+
+    for (let i = 0; i < texts.length; i += batchSize) {
+      const batch = texts.slice(i, i + batchSize);
+      
+      // Create embeddings for batch
+      const batchPromises = batch.map(text => 
+        createEmbedding(text, options, credentialContext, executionContext)
+      );
+      
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
+      
+      // Accumulate usage
+      batchResults.forEach(result => {
+        totalUsage.prompt_tokens += result.usage?.prompt_tokens || 0;
+        totalUsage.total_tokens += result.usage?.total_tokens || 0;
+      });
+    }
+
+    return {
+      embeddings: results,
+      totalUsage
+    };
+  } catch (error) {
+    logger.error("Failed to create batch embeddings", {
+      error: error instanceof Error ? error.message : String(error),
+      model: options.model,
+      textCount: texts.length
     });
     throw error;
   }

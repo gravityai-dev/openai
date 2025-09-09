@@ -2,7 +2,7 @@
  * OpenAI Streaming Service
  */
 
-import { getPlatformDependencies } from "@gravityai-dev/plugin-base";
+import { getNodeCredentials, saveTokenUsage, openAIStreamLogger as logger, getConfig } from "../../shared/platform";
 import { getMessageChunkPublisher } from "@gravityai-dev/gravity-server";
 import OpenAI from "openai";
 import { OpenAIStreamConfig, StreamingMetadata, StreamUsageStats, OpenAICredentials } from "../util/types";
@@ -25,8 +25,6 @@ export async function streamCompletion(
   // Use provided logger or fall back to base logger
   const activeLogger = logger;
 
-  // Get platform dependencies
-  const { getNodeCredentials, getConfig, saveTokenUsage } = getPlatformDependencies();
 
   try {
     // DEBUG: Log the metadata to see what conversationId we received
