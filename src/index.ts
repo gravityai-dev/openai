@@ -3,13 +3,13 @@
  * OpenAI integration for Gravity platform
  */
 
-import type { GravityPluginAPI } from "@gravityai-dev/plugin-base";
+import { createPlugin, type GravityPluginAPI } from "@gravityai-dev/plugin-base";
+import packageJson from "../package.json";
 
-// Plugin definition - no imports at module level
-const plugin = {
-  name: "@gravityai-dev/openai",
-  version: "1.0.0", 
-  description: "OpenAI integration for Gravity workflow system",
+const plugin = createPlugin({
+  name: packageJson.name,
+  version: packageJson.version,
+  description: packageJson.description,
 
   async setup(api: GravityPluginAPI) {
     // First, set up platform dependencies
@@ -44,11 +44,11 @@ const plugin = {
     // Import credential
     const { OpenAICredential } = await import("./credentials");
 
-    // Register nodes
-    api.registerNode("OpenAI", OpenAINode);
-    api.registerNode("OpenAIService", OpenAIServiceNode);
-    api.registerNode("OpenAIStream", OpenAIStreamNode);
-    api.registerNode("OpenAIEmbeddingService", OpenAIEmbeddingServiceNode);
+    // Register nodes - pass the complete node objects
+    api.registerNode(OpenAINode);
+    api.registerNode(OpenAIServiceNode);
+    api.registerNode(OpenAIStreamNode);
+    api.registerNode(OpenAIEmbeddingServiceNode);
 
     // Register credential
     api.registerCredential(OpenAICredential);
@@ -62,7 +62,7 @@ const plugin = {
     api.registerService("openai-embeddings", createEmbedding);
     api.registerService("openai-chat", queryChatGPT);
     api.registerService("openai-stream", streamCompletion);
-  }
-};
+  },
+});
 
 export default plugin;
