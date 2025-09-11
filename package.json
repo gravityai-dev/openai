@@ -1,6 +1,6 @@
 {
   "name": "@gravityai-dev/openai",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "OpenAI integration for Gravity workflow system",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

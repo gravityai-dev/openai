@@ -178,9 +178,10 @@ export async function streamCompletion(
         nodeId: executionContext.nodeId,
         nodeType: "OpenAIStream",
         model: config.model,
-        promptTokens: usage.prompt_tokens,
-        completionTokens: usage.completion_tokens,
+        inputTokens: usage.prompt_tokens,
+        outputTokens: usage.completion_tokens,
         totalTokens: usage.total_tokens,
+        timestamp: new Date(),
       });
       activeLogger.info(`Stream token usage saved: ${usage.total_tokens} tokens for model ${config.model}`);
     }
