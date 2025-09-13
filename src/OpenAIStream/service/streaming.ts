@@ -2,8 +2,13 @@
  * OpenAI Streaming Service
  */
 
-import { getNodeCredentials, saveTokenUsage, openAIStreamLogger as logger, getConfig } from "../../shared/platform";
-import { getMessageChunkPublisher } from "@gravityai-dev/gravity-server";
+import {
+  createLogger,
+  getConfig,
+  getNodeCredentials,
+  saveTokenUsage,
+  publishMessageChunk,
+} from "../../shared/platform";
 import OpenAI from "openai";
 import { OpenAIStreamConfig, StreamingMetadata, StreamUsageStats, OpenAICredentials } from "../util/types";
 
@@ -24,7 +29,6 @@ export async function streamCompletion(
 ): Promise<StreamUsageStats> {
   // Use provided logger or fall back to base logger
   const activeLogger = logger;
-
 
   try {
     // DEBUG: Log the metadata to see what conversationId we received
@@ -83,21 +87,8 @@ export async function streamCompletion(
       },
     });
 
-    // Create publisher with required parameters
-    const appConfig = getConfig();
+    // Use the new unified message chunk publisher
     const providerId = "ChatGPT Stream";
-
-    // This will either initialize the singleton or return the existing instance
-    const publisher = getMessageChunkPublisher(
-      appConfig.REDIS_HOST,
-      appConfig.REDIS_PORT,
-      appConfig.REDIS_TOKEN || appConfig.REDIS_PASSWORD,
-      providerId,
-      appConfig.REDIS_TOKEN ? 'default' : appConfig.REDIS_USERNAME,
-      undefined, // db
-      appConfig.REDIS_TOKEN,
-      appConfig.REDIS_TLS ? true : undefined
-    );
 
     // Process the stream with batched chunks for smoother streaming
     let chunkIndex = 0;
@@ -129,17 +120,17 @@ export async function streamCompletion(
             console.log(`📦 [${executionId}] Publishing batch ${chunkIndex} (${batchedContent.length} chars)...`);
           }
 
-          await publisher.publishMessageChunk(
-            batchedContent,
-            {
-              chatId: metadata.chatId,
-              conversationId: metadata.conversationId,
-              userId: metadata.userId,
-              providerId: providerId,
-            },
-            chunkIndex,
-            { channel: config.redisChannel }
-          );
+          await publishMessageChunk({
+            text: batchedContent,
+            index: chunkIndex,
+            chatId: metadata.chatId || "",
+            conversationId: metadata.conversationId || "",
+            userId: metadata.userId || "",
+            providerId: providerId,
+            workflowId: metadata.workflowId,
+            workflowRunId: metadata.workflowId,
+            metadata: metadata,
+          });
 
           // Log every 10th batch to reduce noise
           if (chunkIndex % 10 === 0) {
@@ -160,17 +151,17 @@ export async function streamCompletion(
     // Publish any remaining content in the final batch
     if (batchedContent.length > 0) {
       chunkIndex++;
-      await publisher.publishMessageChunk(
-        batchedContent,
-        {
-          chatId: metadata.chatId,
-          conversationId: metadata.conversationId,
-          userId: metadata.userId,
-          providerId: providerId,
-        },
-        chunkIndex,
-        { channel: config.redisChannel }
-      );
+      await publishMessageChunk({
+        text: batchedContent,
+        index: chunkIndex,
+        chatId: metadata.chatId || "",
+        conversationId: metadata.conversationId || "",
+        userId: metadata.userId || "",
+        providerId: providerId,
+        workflowId: metadata.workflowId,
+        workflowRunId: metadata.workflowId,
+        metadata: metadata,
+      });
       console.log(`📦 [${executionId}] Published final batch ${chunkIndex} (${batchedContent.length} chars)`);
     }
     // Save token usage if execution context provided and we have usage data
