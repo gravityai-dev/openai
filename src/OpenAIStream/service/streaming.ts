@@ -90,12 +90,13 @@ export async function streamCompletion(
     // Use the new unified message chunk publisher
     const providerId = "ChatGPT Stream";
 
-    // Process the stream with batched chunks for smoother streaming
+    // Process the stream with optimized batching
     let chunkIndex = 0;
     let fullText = "";
     let batchedContent = "";
-    const BATCH_SIZE = 10; // Batch 5 tokens into one chunk for smoother streaming
-    let tokenCount = 0;
+    const BATCH_SIZE = 15; // Increased batch size for better performance
+    const BATCH_TIME_MS = 50; // Time-based batching for smoother streaming
+    let lastBatchTime = Date.now();
     let usage: any = null;
 
     for await (const chunk of stream) {
@@ -107,19 +108,17 @@ export async function streamCompletion(
       const content = chunk.choices[0]?.delta?.content || "";
 
       if (content && content.length > 0) {
-        tokenCount++;
         fullText += content;
         batchedContent += content;
 
-        // Publish batched chunks for smoother streaming experience
-        if (tokenCount >= BATCH_SIZE || batchedContent.length >= 20) {
+        const now = Date.now();
+        const timeSinceLastBatch = now - lastBatchTime;
+        
+        // Publish based on content size OR time elapsed for smoother streaming
+        if (batchedContent.length >= BATCH_SIZE || timeSinceLastBatch >= BATCH_TIME_MS) {
           chunkIndex++;
 
-          // Reduced logging for better debugging
-          if (chunkIndex % 5 === 1) {
-            console.log(`📦 [${executionId}] Publishing batch ${chunkIndex} (${batchedContent.length} chars)...`);
-          }
-
+          // Remove console.log for performance - only log errors
           await publishMessageChunk({
             text: batchedContent,
             index: chunkIndex,
@@ -132,18 +131,9 @@ export async function streamCompletion(
             metadata: metadata,
           });
 
-          // Log every 10th batch to reduce noise
-          if (chunkIndex % 10 === 0) {
-            activeLogger.info(`Published batch ${chunkIndex}`, {
-              channel: config.redisChannel,
-              workflowId: metadata.workflowId,
-              batchSize: batchedContent.length,
-            });
-          }
-
           // Reset batch
           batchedContent = "";
-          tokenCount = 0;
+          lastBatchTime = now;
         }
       }
     }

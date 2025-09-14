@@ -53,7 +53,7 @@ export function buildOutputEvent(config: {
 }
 
 /**
- * Publish a message chunk event
+ * Publish a message chunk event - Optimized version
  */
 export async function publishMessageChunk(config: {
   text: string;
@@ -69,16 +69,18 @@ export async function publishMessageChunk(config: {
   channel: string;
   success: boolean;
 }> {
-  const logger = createLogger("MessageChunkPublisher");
-  
   try {
-    // Build the event structure
-    const event = buildOutputEvent({
-      eventType: "messageChunk",
+    // Build the event structure - optimized with pre-allocated object
+    const event = {
+      id: Math.random().toString(36).substring(2, 15),
+      timestamp: new Date().toISOString(),
+      providerId: config.providerId,
       chatId: config.chatId,
       conversationId: config.conversationId,
       userId: config.userId,
-      providerId: config.providerId,
+      __typename: "GravityEvent",
+      type: "GRAVITY_EVENT",
+      eventType: "messageChunk",
       data: {
         text: config.text,
         index: config.index,
@@ -88,14 +90,15 @@ export async function publishMessageChunk(config: {
           workflowRunId: config.workflowRunId,
         },
       },
-    });
+    };
 
-    // Get Redis client from platform - call it fresh each time
+    // Get Redis client from platform - workflow manages connection pooling
     const deps = getPlatformDependencies();
     const redis = deps.getRedisClient();
 
-    // Publish to Redis Streams (not Pub/Sub) for reliable delivery
-    const streamKey = "workflow:events:stream";
+    // Publish to Redis Streams with minimal overhead
+    const REDIS_NAMESPACE = process.env.REDIS_NAMESPACE || process.env.NODE_ENV || 'local';
+    const streamKey = `${REDIS_NAMESPACE}:workflow:events:stream`;
     const conversationId = config.conversationId || "";
 
     await redis.xadd(
@@ -109,18 +112,13 @@ export async function publishMessageChunk(config: {
       JSON.stringify(event)
     );
 
-    logger.info("MessageChunk published as GravityEvent", {
-      eventType: "messageChunk",
-      channel: OUTPUT_CHANNEL,
-      index: config.index,
-      providerId: config.providerId,
-    });
-
+    // Remove verbose logging for performance - only log errors
     return {
       channel: OUTPUT_CHANNEL,
       success: true,
     };
   } catch (error: any) {
+    const logger = createLogger("MessageChunkPublisher");
     logger.error("Failed to publish message chunk", {
       error: error.message,
       providerId: config.providerId,
