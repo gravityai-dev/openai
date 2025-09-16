@@ -94,8 +94,8 @@ export async function streamCompletion(
     let chunkIndex = 0;
     let fullText = "";
     let batchedContent = "";
-    const BATCH_SIZE = 55; // Increased batch size for better performance
-    const BATCH_TIME_MS = 50; // Time-based batching for smoother streaming
+    const BATCH_SIZE = 35; // Increased batch size for better performance
+    const BATCH_TIME_MS = 20; // Time-based batching for smoother streaming
     let lastBatchTime = Date.now();
     let usage: any = null;
 
