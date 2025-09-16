@@ -45,10 +45,10 @@ export function buildOutputEvent(config: {
     chatId: config.chatId,
     conversationId: config.conversationId,
     userId: config.userId,
-    __typename: "GravityEvent",  // Single type for all events
-    type: "GRAVITY_EVENT",       // Single type enum
+    __typename: "GravityEvent", // Single type for all events
+    type: "GRAVITY_EVENT", // Single type enum
     eventType: config.eventType, // Distinguishes between text, progress, card, etc.
-    data: config.data            // Contains the actual event data
+    data: config.data, // Contains the actual event data
   };
 }
 
@@ -70,17 +70,13 @@ export async function publishMessageChunk(config: {
   success: boolean;
 }> {
   try {
-    // Build the event structure - optimized with pre-allocated object
-    const event = {
-      id: Math.random().toString(36).substring(2, 15),
-      timestamp: new Date().toISOString(),
-      providerId: config.providerId,
+    // Build the event structure
+    const event = buildOutputEvent({
+      eventType: "messageChunk",
       chatId: config.chatId,
       conversationId: config.conversationId,
       userId: config.userId,
-      __typename: "GravityEvent",
-      type: "GRAVITY_EVENT",
-      eventType: "messageChunk",
+      providerId: config.providerId,
       data: {
         text: config.text,
         index: config.index,
@@ -90,29 +86,12 @@ export async function publishMessageChunk(config: {
           workflowRunId: config.workflowRunId,
         },
       },
-    };
+    });
 
-    // Get Redis client from platform - workflow manages connection pooling
-    const deps = getPlatformDependencies();
-    const redis = deps.getRedisClient();
+    // Use the universal gravityPublish function from platform API
+    const platformDeps = getPlatformDependencies();
+    await platformDeps.gravityPublish(OUTPUT_CHANNEL, event);
 
-    // Publish to Redis Streams with minimal overhead
-    const REDIS_NAMESPACE = process.env.REDIS_NAMESPACE || process.env.NODE_ENV || 'local';
-    const streamKey = `${REDIS_NAMESPACE}:workflow:events:stream`;
-    const conversationId = config.conversationId || "";
-
-    await redis.xadd(
-      streamKey,
-      "*",
-      "conversationId",
-      conversationId,
-      "channel",
-      OUTPUT_CHANNEL,
-      "message",
-      JSON.stringify(event)
-    );
-
-    // Remove verbose logging for performance - only log errors
     return {
       channel: OUTPUT_CHANNEL,
       success: true,
