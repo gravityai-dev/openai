@@ -1,6 +1,6 @@
 {
   "name": "@gravityai-dev/openai",
-  "version": "1.0.26",
+  "version": "1.0.27",
   "description": "OpenAI integration for Gravity workflow system",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -32,8 +32,8 @@
     "access": "public"
   },
   "dependencies": {
-    "@gravityai-dev/gravity-server": "^0.2.118",
-    "@gravityai-dev/plugin-base": "^1.0.25",
+    "@gravityai-dev/gravity-server": "^0.2.119",
+    "@gravityai-dev/plugin-base": "^1.0.26",
     "openai": "^4.0.0",
     "p-retry": "^5.1.2",
     "zod": "^3.22.0"
