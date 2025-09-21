@@ -22,8 +22,8 @@ const definition: EnhancedNodeDefinition = {
   color: "#2F6F66",
   logoUrl: "https://res.cloudinary.com/sonik/image/upload/v1749262616/gravity/icons/ChatGPT-Logo.svg.webp",
 
-  // SERVICE NODE - responds to SERVICE_CALL signals
-  isService: true,
+  // Node template for styling
+  template: "service", // Options: "standard", "service", "mini"
 
   // NO REGULAR INPUTS/OUTPUTS - services use service connectors
   inputs: [],
@@ -35,7 +35,8 @@ const definition: EnhancedNodeDefinition = {
       name: "llmService",
       description: "OpenAI LLM service for text generation",
       serviceType: "llm",
-      methods: ["generateText"],
+      methods: ["generateText", "generateChatCompletion"],
+      isService: true, // This node PROVIDES LLM services to others
     },
   ],
 
