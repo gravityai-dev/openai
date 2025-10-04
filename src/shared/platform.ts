@@ -3,20 +3,32 @@
  */
 import { getPlatformDependencies } from "@gravityai-dev/plugin-base";
 
-// Get platform dependencies once
-const deps = getPlatformDependencies();
+// Lazy getters to avoid module-level getPlatformDependencies call
+function getDeps() {
+  return getPlatformDependencies();
+}
 
-export const getNodeCredentials = deps.getNodeCredentials;
-export const saveTokenUsage = deps.saveTokenUsage;
-export const createLogger = deps.createLogger;
-export const getConfig = deps.getConfig;
-export const getRedisClient = deps.getRedisClient;
+export const getNodeCredentials = (context: any, credentialName: string) => 
+  getDeps().getNodeCredentials(context, credentialName);
+export const saveTokenUsage = (usage: any) => 
+  getDeps().saveTokenUsage(usage);
+export const createLogger = (name: string) => 
+  getDeps().createLogger(name);
+export const getConfig = () => 
+  getDeps().getConfig();
+export const getRedisClient = () => 
+  getDeps().getRedisClient();
 
-// Create shared loggers
-export const openAILogger = createLogger("OpenAI");
-export const openAIStreamLogger = createLogger("OpenAIStream");
-export const openAIServiceLogger = createLogger("OpenAIService");
-export const embeddingLogger = createLogger("OpenAIEmbedding");
+// Create shared loggers lazily
+let _openAILogger: any;
+let _openAIStreamLogger: any;
+let _openAIServiceLogger: any;
+let _embeddingLogger: any;
+
+export const openAILogger = () => _openAILogger || (_openAILogger = createLogger("OpenAI"));
+export const openAIStreamLogger = () => _openAIStreamLogger || (_openAIStreamLogger = createLogger("OpenAIStream"));
+export const openAIServiceLogger = () => _openAIServiceLogger || (_openAIServiceLogger = createLogger("OpenAIService"));
+export const embeddingLogger = () => _embeddingLogger || (_embeddingLogger = createLogger("OpenAIEmbedding"));
 
 // Single channel for all events
 export const OUTPUT_CHANNEL = "gravity:output";
@@ -89,8 +101,11 @@ export async function publishMessageChunk(config: {
     });
 
     // Use the universal gravityPublish function from platform API
-    const platformDeps = getPlatformDependencies();
-    await platformDeps.gravityPublish(OUTPUT_CHANNEL, event);
+    const deps = getDeps();
+    if (!deps.gravityPublish) {
+      throw new Error("gravityPublish is not available in platform dependencies");
+    }
+    await deps.gravityPublish(OUTPUT_CHANNEL, event);
 
     return {
       channel: OUTPUT_CHANNEL,

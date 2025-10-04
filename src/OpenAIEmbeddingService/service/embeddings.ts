@@ -4,8 +4,11 @@
  */
 
 import OpenAI from "openai";
-import { getNodeCredentials, saveTokenUsage, embeddingLogger as logger } from "../../shared/platform";
+import { getNodeCredentials, saveTokenUsage, embeddingLogger } from "../../shared/platform";
 import { OpenAIEmbeddingOptions, OpenAIEmbeddingResponse } from "../util/types";
+
+// Get logger instance
+const logger = embeddingLogger();
 
 type CredentialContext = any;
 
