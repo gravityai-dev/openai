@@ -1,60 +1,111 @@
 /**
  * OpenAI Stream node executor
  * Handles streaming chat completions from OpenAI
+ * Emits text chunks as they arrive from OpenAI
  */
-import { getPlatformDependencies, type NodeExecutionContext, type ValidationResult } from "@gravityai-dev/plugin-base";
-import { streamCompletion } from "../service/streaming";
+import { type NodeExecutionContext, type ValidationResult } from "@gravityai-dev/plugin-base";
+import { CallbackNode } from "../../shared/platform";
+import { streamCompletionCallback } from "../service";
+import { OpenAIStreamConfig, OpenAIStreamState } from "../util/types";
 
-import { OpenAIStreamConfig, StreamingMetadata, OpenAIStreamOutput } from "../util/types";
-
-// Get platform dependencies
-const { PromiseNode } = getPlatformDependencies();
-
-export default class OpenAIStreamExecutor extends PromiseNode<OpenAIStreamConfig> {
+export default class OpenAIStreamExecutor extends CallbackNode<OpenAIStreamConfig, OpenAIStreamState> {
   constructor() {
     super("OpenAIStream");
   }
 
   protected async validateConfig(config: OpenAIStreamConfig): Promise<ValidationResult> {
-    // Base validation in PromiseNode.execute already validates context
     // Service will validate specific OpenAI parameters
     return { success: true };
   }
 
-  protected async executeNode(
-    inputs: Record<string, any>,
-    config: OpenAIStreamConfig,
-    context: NodeExecutionContext
-  ): Promise<OpenAIStreamOutput> {
-    // Extract workflow variables (always present)
-    const { chatId, conversationId, userId, providerId } = context.workflow!.variables!;
+  /**
+   * Initialize state for streaming
+   */
+  initializeState(inputs: any): OpenAIStreamState {
+    this.logger.info(`OpenAIStream: initializeState called`);
 
-    const streamingMetadata: StreamingMetadata = {
-      workflowId: context.workflow!.id,
-      executionId: context.executionId,
-      chatId,
-      conversationId,
-      userId,
-      providerId,
+    return {
+      chunk: "",
+      text: "",
+      usage: {
+        estimated: true,
+        total_tokens: 0,
+        chunk_count: 0,
+        full_text: "",
+      },
+      hasStartedStreaming: false, // Track if we've started streaming
     };
+  }
 
-    // Build credential context for service
-    const credentialContext = this.buildCredentialContext(context);
+  /**
+   * Handle events and update state
+   */
+  async handleEvent(
+    event: { type: string; inputs?: any; config?: any },
+    state: OpenAIStreamState,
+    emit: (output: any) => void
+  ): Promise<any> {
+    const { inputs, config } = event;
+    const resolvedConfig = config as OpenAIStreamConfig;
 
-    // Call streaming service with execution context
-    const result = await streamCompletion(config, streamingMetadata, credentialContext, this.logger, {
-      workflowId: context.workflowId || context.workflow?.id || "",
-      executionId: context.executionId,
-      nodeId: context.nodeId,
+    this.logger.info(`🎯 OpenAIStream: Received event ${event.type}`, {
+      hasText: !!state.text,
+      chunkCount: state.usage.chunk_count,
+      hasStartedStreaming: state.hasStartedStreaming,
+      hasConfig: !!resolvedConfig,
     });
 
-    // Return outputs
-    return {
-      __outputs: {
-        text: result.full_text || "",
-        usage: result,
-      },
-    };
+    // If already completed, return current state
+    if (state.hasStartedStreaming) {
+      this.logger.info(`OpenAIStream: Already streamed, returning existing state`);
+      return state;
+    }
+
+    // If we haven't streamed yet AND we have config, stream now
+    // The framework ensures this only runs when dependencies are satisfied
+    if (!state.hasStartedStreaming && resolvedConfig) {
+      this.logger.info(`OpenAIStream: Starting stream`);
+
+      // Mark that we've started streaming
+      const updatedState = { ...state, hasStartedStreaming: true };
+
+      // Start streaming - service does all the work
+      const executionContext = (this as any).executionContext as NodeExecutionContext;
+
+      // DEBUG: Check if executionContext exists
+      this.logger.info("🔍 [DEBUG] executionContext check:", {
+        hasExecutionContext: !!executionContext,
+        hasWorkflowId: !!executionContext?.workflow?.id,
+        hasNodeId: !!executionContext?.nodeId,
+        contextKeys: executionContext ? Object.keys(executionContext) : [],
+      });
+
+      const credentialContext = this.buildCredentialContext(executionContext);
+
+      // Service streams, emits chunks, returns final output with __outputs
+      // Pass executionContext so service can discover MCP tools
+      // Service handles all emits (incremental + final)
+      const finalOutput = await streamCompletionCallback(
+        resolvedConfig,
+        credentialContext,
+        this.logger,
+        executionContext, // Contains context for MCP service discovery
+        emit,
+        updatedState
+      );
+
+      // CRITICAL: Return with isComplete: true to close the callback node
+      // Include final outputs in state for UI display
+      return {
+        ...updatedState,
+        ...finalOutput.__outputs,
+        isComplete: true,
+      };
+    }
+
+    // Default: return current state
+    this.logger.info(`OpenAIStream: No config yet, waiting`);
+    return state;
   }
 
   /**
@@ -71,5 +122,14 @@ export default class OpenAIStreamExecutor extends PromiseNode<OpenAIStreamConfig
       config: context.config,
       credentials: context.credentials || {},
     };
+  }
+
+  /**
+   * Cleanup when node is stopped
+   */
+  async cleanup(state: OpenAIStreamState): Promise<void> {
+    const chunkCount = state.usage?.chunk_count ?? 0;
+    const textLength = state.text?.length ?? 0;
+    this.logger.info(`OpenAIStream: Cleanup - streamed ${chunkCount} chunks, ${textLength} chars`);
   }
 }

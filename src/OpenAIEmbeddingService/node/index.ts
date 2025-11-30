@@ -45,32 +45,33 @@ const definition: EnhancedNodeDefinition = {
     properties: {
       model: {
         type: "string",
-        title: "Model",
-        description: "Select the OpenAI embedding model to use",
-        enum: ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"],
-        enumNames: [
-          "text-embedding-3-small (1536, fixed)",
-          "text-embedding-3-large (3072, reducible)",
-          "text-embedding-ada-002 (1536, fixed)",
+        title: "Embedding Model",
+        description: "Select model and dimensions (combined)",
+        enum: [
+          "text-embedding-3-small",
+          "text-embedding-3-small-1536",
+          "text-embedding-3-large-1024",
+          "text-embedding-3-large",
+          "text-embedding-3-large-3072",
+          "text-embedding-ada-002"
         ],
-        default: "text-embedding-3-small",
-        "ui:help":
-          "text-embedding-3-small supports up to 1536 dimensions, text-embedding-3-large supports up to 3072 dimensions",
+        enumNames: [
+          "text-embedding-3-small (512D) - Fast",
+          "text-embedding-3-small (1536D) - Higher quality",
+          "text-embedding-3-large (1024D) - Bedrock compatible ⭐",
+          "text-embedding-3-large (1536D) - Best quality",
+          "text-embedding-3-large (3072D) - Maximum",
+          "text-embedding-ada-002 (1536D) - Legacy"
+        ],
+        default: "text-embedding-3-large",
+        "ui:help": "Recommended: text-embedding-3-large (1536D) for best quality spatial UMAP visualization"
       },
       normalize: {
         type: "boolean",
         title: "Normalize Embeddings",
-        description: "Whether to normalize the embedding vectors (recommended for similarity search)",
+        description: "Normalize to unit length (recommended for cosine similarity)",
         default: true,
         "ui:widget": "toggle",
-      },
-      dimensions: {
-        type: "number",
-        title: "Output Dimensions",
-        description: "Number of dimensions for the output embedding (only applies to text-embedding-3-large)",
-        enum: [256, 512, 1024, 1536, 3072],
-        enumNames: ["256 dimensions", "512 dimensions", "1024 dimensions", "1536 dimensions", "3072 dimensions (full)"],
-        "ui:help": "Only text-embedding-3-large supports dimension reduction. Other models will ignore this setting.",
       },
     },
     required: ["model"],

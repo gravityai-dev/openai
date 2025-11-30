@@ -40,36 +40,10 @@ export default class OpenAIEmbeddingServiceExecutor extends PromiseNode<OpenAIEm
 
       switch (method) {
         case "createEmbedding": {
-          const { createEmbedding } = await import("../service/embeddings");
-          const { text } = params;
-          
-          // Validate input
-          if (!text || typeof text !== "string") {
-            throw new Error("Text is required and must be a string");
-          }
-          
+          const { createEmbedding } = await import("../service/createEmbedding");
           const actualConfig = ("config" in config && config.config ? config.config : config) as any;
-          const result = await createEmbedding(
-            text,
-            {
-              model: actualConfig.model || "text-embedding-3-small",
-              dimensions: actualConfig.dimensions,
-              normalize: actualConfig.normalize !== false,
-            },
-            context.credentials || {},
-            context.workflowId ? {
-              workflowId: context.workflowId,
-              executionId: context.executionId,
-              nodeId: context.nodeId,
-            } : undefined
-          );
           
-          return {
-            embedding: result.embedding,
-            dimensions: result.dimensions,
-            model: result.model,
-            usage: result.usage,
-          };
+          return await createEmbedding(params, actualConfig, context);
         }
         case "createBatchEmbeddings": {
           const { createBatchEmbeddings } = await import("../service/embeddings");

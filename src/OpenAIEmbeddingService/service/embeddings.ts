@@ -83,9 +83,8 @@ export async function createEmbedding(
         nodeId: executionContext.nodeId,
         nodeType: "OpenAIEmbedding",
         model: options.model,
-        promptTokens: response.usage.total_tokens, // Embeddings only report total tokens
-        completionTokens: 0,
-        totalTokens: response.usage.total_tokens,
+        usage: response.usage,  // Pass entire usage object
+        timestamp: new Date(),
       });
       logger.info(`Embedding token usage saved: ${response.usage.total_tokens} tokens for model ${options.model}`);
     }

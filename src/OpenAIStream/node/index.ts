@@ -3,12 +3,8 @@
  * Provides streaming text generation capabilities
  */
 
-import { getPlatformDependencies, type EnhancedNodeDefinition } from "@gravityai-dev/plugin-base";
-import { SYSTEM_CHANNEL, AI_RESULT_CHANNEL, QUERY_MESSAGE_CHANNEL } from "@gravityai-dev/gravity-server";
+import { type EnhancedNodeDefinition, NodeInputType } from "@gravityai-dev/plugin-base";
 import OpenAIStreamExecutor from "./executor";
-
-// Get platform dependencies
-const { NodeInputType, NodeConcurrency } = getPlatformDependencies();
 
 const definition: EnhancedNodeDefinition = {
   type: "OpenAIStream",
@@ -29,14 +25,24 @@ const definition: EnhancedNodeDefinition = {
 
   outputs: [
     {
-      name: "text",
+      name: "reasoning",
       type: NodeInputType.STRING,
-      description: "The complete generated text from the stream",
+      description: "The reasoning/thinking process",
     },
     {
-      name: "usage",
+      name: "chunk",
       type: NodeInputType.OBJECT,
-      description: "Token burn",
+      description: "Streaming text chunks (emitted in real-time)",
+    },
+    {
+      name: "mcpResult",
+      type: NodeInputType.OBJECT,
+      description: "MCP tool results",
+    },
+    {
+      name: "text",
+      type: NodeInputType.STRING,
+      description: "The complete generated text (final output)",
     },
   ],
 
@@ -46,18 +52,56 @@ const definition: EnhancedNodeDefinition = {
       model: {
         type: "string",
         title: "Model",
-        description: "Select the OpenAI model to use",
-        enum: ["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo-preview", "gpt-4o"],
-        enumNames: ["GPT-3.5 Turbo", "GPT-4", "GPT-4 Turbo", "GPT-4o"],
-        default: "gpt-4o",
+        description: "Select the GPT-5 model variant",
+        enum: ["gpt-5", "gpt-5-mini", "gpt-5-nano"],
+        enumNames: ["GPT-5 (Complex reasoning & coding)", "GPT-5 Mini (Balanced)", "GPT-5 Nano (Fast & efficient)"],
+        default: "gpt-5",
+      },
+      reasoningEffort: {
+        type: "string",
+        title: "Reasoning Effort",
+        description: "Control reasoning depth. Minimal=fastest, High=most thorough",
+        enum: ["minimal", "low", "medium", "high"],
+        enumNames: ["Minimal (Fastest)", "Low (Fast)", "Medium (Balanced)", "High (Thorough)"],
+        default: "medium",
+      },
+      reasoningSummary: {
+        type: "string",
+        title: "Reasoning Summary",
+        description:
+          "Control reasoning summary visibility. Note: gpt-5-mini does NOT support reasoning summaries, only gpt-5 and gpt-5-nano",
+        enum: ["auto", "detailed"],
+        enumNames: ["Auto (Model decides)", "Detailed (Always show)"],
+        default: "auto",
+      },
+      verbosity: {
+        type: "string",
+        title: "Verbosity",
+        description: "Control output length",
+        enum: ["low", "medium", "high"],
+        enumNames: ["Low (Concise)", "Medium (Balanced)", "High (Thorough)"],
+        default: "medium",
       },
       systemPrompt: {
         type: "string",
         title: "System Prompt",
         description:
-          "System message prompt. Supports template syntax like {{input.fieldName}} to reference input data.",
+          "System message prompt. Supports template syntax like {{input.fieldName}} to reference input data. IMPORTANT: Avoid contradictory instructions - GPT-5 will waste reasoning tokens trying to reconcile them. Be clear and consistent.",
         default: "",
         "ui:field": "template",
+      },
+      enablePreambles: {
+        type: "boolean",
+        title: "Enable Preambles",
+        description:
+          "Let GPT-5 explain its reasoning before calling tools. Improves transparency and tool-calling accuracy.",
+        default: true,
+      },
+      enableMarkdown: {
+        type: "boolean",
+        title: "Enable Markdown Formatting",
+        description: "Format output with Markdown (code blocks, lists, tables). GPT-5 doesn't use Markdown by default.",
+        default: false,
       },
       prompt: {
         type: "string",
@@ -75,30 +119,26 @@ const definition: EnhancedNodeDefinition = {
       },
       maxTokens: {
         type: "number",
-        title: "Max Tokens",
+        title: "Max Output Tokens",
         description: "Maximum number of tokens to generate",
-        default: 256,
+        default: 2048,
         minimum: 1,
-        maximum: 4096,
-      },
-      temperature: {
-        type: "number",
-        title: "Temperature",
-        description: "Controls randomness (0-2)",
-        default: 0.7,
-        minimum: 0,
-        maximum: 2,
-      },
-      redisChannel: {
-        type: "string",
-        title: "Redis Channel",
-        description: "Redis channel to publish streaming chunks to",
-        enum: [AI_RESULT_CHANNEL, SYSTEM_CHANNEL, QUERY_MESSAGE_CHANNEL],
-        enumNames: ["AI Results", "System Messages", "Query Messages"],
-        default: AI_RESULT_CHANNEL,
+        maximum: 16384,
       },
     },
-    required: ["model", "prompt", "redisChannel"],
+    required: ["model", "prompt"],
+    "ui:order": [
+      "model",
+      "reasoningEffort",
+      "reasoningSummary",
+      "verbosity",
+      "enablePreambles",
+      "enableMarkdown",
+      "systemPrompt",
+      "prompt",
+      "history",
+      "maxTokens",
+    ],
   },
 
   // This is where we declare credential requirements
@@ -111,12 +151,15 @@ const definition: EnhancedNodeDefinition = {
     },
   ],
 
-  capabilities: {
-    parallelizable: true,
-    requiresConnection: true,
-    isTrigger: false,
-    concurrency: NodeConcurrency.MEDIUM, // User's API key handles rate limiting
-  },
+  // Service connectors - MCP protocol for dynamic tool discovery
+  serviceConnectors: [
+    {
+      name: "mcpService",
+      description: "MCP service connector - automatic schema discovery",
+      serviceType: "mcp",
+      isService: false, // This node CONSUMES MCP services from others
+    },
+  ],
 };
 
 // Export as enhanced node

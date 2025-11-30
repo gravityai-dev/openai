@@ -8,6 +8,9 @@ function getDeps() {
   return getPlatformDependencies();
 }
 
+// Export CallbackNode for stateful nodes
+export const CallbackNode = getDeps().CallbackNode;
+
 export const getNodeCredentials = (context: any, credentialName: string) => 
   getDeps().getNodeCredentials(context, credentialName);
 export const saveTokenUsage = (usage: any) => 

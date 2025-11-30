@@ -102,9 +102,7 @@ export async function queryChatGPT(
         nodeId: executionContext.nodeId,
         nodeType: "OpenAI",
         model: config.model,
-        inputTokens: data.usage.prompt_tokens,
-        outputTokens: data.usage.completion_tokens,
-        totalTokens: data.usage.total_tokens,
+        usage: data.usage,  // Pass entire usage object
         timestamp: new Date(),
       });
       log.info(`Token usage saved: ${data.usage.total_tokens} tokens for model ${config.model}`);

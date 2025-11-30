@@ -51,12 +51,11 @@ const plugin = createPlugin({
     // Import and register services
     const { createEmbedding } = await import("./OpenAIEmbeddingService/service/embeddings");
     const { queryChatGPT } = await import("./OpenAI/service/queryChatGPT");
-    const { streamCompletion } = await import("./OpenAIStream/service/streaming");
 
     // Register services for platform use
     api.registerService("openai-embeddings", createEmbedding);
     api.registerService("openai-chat", queryChatGPT);
-    api.registerService("openai-stream", streamCompletion);
+    // Note: OpenAIStream is now a CallbackNode - no service registration needed
   },
 });
 
