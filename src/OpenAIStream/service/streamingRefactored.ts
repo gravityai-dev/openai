@@ -94,6 +94,16 @@ export async function streamCompletionCallback(
     logger.info("🤖🤖🤖 [STARTING LLM] About to call runConversationLoop with tools:", {
       toolCount: config.tools?.length || 0,
     });
+
+    // Build trace context for MCP telemetry
+    const traceContext =
+      executionContext?.executionId && executionContext?.nodeId
+        ? {
+            executionId: executionContext.executionId,
+            parentNodeId: executionContext.nodeId,
+          }
+        : undefined;
+
     const result = await runConversationLoop({
       openai,
       streamParams,
@@ -105,6 +115,7 @@ export async function streamCompletionCallback(
       emitMcpResult,
       logger,
       maxIterations: 10,
+      traceContext,
     });
 
     logger.info(`🔍 [streamingRefactored] IMMEDIATELY after runConversationLoop - result keys:`, Object.keys(result));

@@ -12,23 +12,9 @@ const plugin = createPlugin({
   description: packageJson.description,
 
   async setup(api: GravityPluginAPI) {
-    // Set up platform dependencies with ALL required fields
-    const { setPlatformDependencies } = await import("@gravityai-dev/plugin-base");
-    setPlatformDependencies({
-      PromiseNode: api.classes.PromiseNode,
-      CallbackNode: api.classes.CallbackNode,
-      NodeInputType: api.types.NodeInputType,
-      NodeConcurrency: api.types.NodeConcurrency,
-      getNodeCredentials: api.getNodeCredentials,
-      getConfig: api.getConfig,
-      createLogger: api.createLogger,
-      saveTokenUsage: api.saveTokenUsage,
-      callService: api.callService,
-      getRedisClient: api.getRedisClient,
-      gravityPublish: api.gravityPublish,
-      executeNodeWithRouting: api.executeNodeWithRouting,
-      getAudioWebSocketManager: api.getAudioWebSocketManager,
-    });
+    // Set up platform dependencies using the standard initializer
+    const { initializePlatformFromAPI } = await import("@gravityai-dev/plugin-base");
+    initializePlatformFromAPI(api);
 
     // Import nodes after dependencies are set
     const { OpenAINode } = await import("./OpenAI/node");

@@ -4,7 +4,7 @@
  */
 
 import OpenAI from "openai";
-import { executeToolCallsInParallel, ToolCall } from "../mcp/toolExecution";
+import { executeToolCallsInParallel, ToolCall, MCPTraceContext } from "../mcp/toolExecution";
 import { processStreamChunk, initializeStreamState, StreamState } from "../streaming/streamProcessor";
 import { TextEmitter } from "../streaming/textEmitter";
 import { ReasoningEmitter } from "../streaming/reasoningEmitter";
@@ -26,6 +26,8 @@ export interface ConversationConfig {
   emitMcpResult: (result: { name: string; arguments: any; result: any }) => void;
   logger: any;
   maxIterations?: number;
+  /** Context for MCP telemetry tracing */
+  traceContext?: MCPTraceContext;
 }
 
 export interface ConversationResult {
@@ -40,8 +42,18 @@ export interface ConversationResult {
  * Run the main conversation loop with tool calling support (GPT-5 only)
  */
 export async function runConversationLoop(config: ConversationConfig): Promise<ConversationResult> {
-  const { openai, streamParams, inputItems, mcpService, textEmitter, reasoningEmitter, emit, emitMcpResult, logger } =
-    config;
+  const {
+    openai,
+    streamParams,
+    inputItems,
+    mcpService,
+    textEmitter,
+    reasoningEmitter,
+    emit,
+    emitMcpResult,
+    logger,
+    traceContext,
+  } = config;
   const maxIterations = config.maxIterations || 10; // Restored: Responses API DOES support multi-turn function calling
 
   let conversationComplete = false;
@@ -56,6 +68,16 @@ export async function runConversationLoop(config: ConversationConfig): Promise<C
 
     // Update input with latest items (including function_call_outputs)
     streamParams.input = inputItems;
+
+    // DEBUG: Log function_call_output content on iteration 2+
+    if (iteration > 1) {
+      const functionOutputs = inputItems.filter((item: any) => item.type === "function_call_output");
+      functionOutputs.forEach((fo: any, idx: number) => {
+        const outputLength = fo.output?.length || 0;
+        const outputPreview = fo.output?.substring(0, 500) || "";
+        logger.info(`🔍 [DEBUG] function_call_output[${idx}] length: ${outputLength}, preview: ${outputPreview}...`);
+      });
+    }
 
     // Use previous_response_id for multi-turn (after first iteration)
     if (previousResponseId && iteration > 1) {
@@ -166,8 +188,8 @@ export async function runConversationLoop(config: ConversationConfig): Promise<C
           });
         }
 
-        // Execute all tool calls in parallel
-        const toolResults = await executeToolCallsInParallel(streamState.toolCalls, mcpService, logger);
+        // Execute all tool calls in parallel (with telemetry tracing if context provided)
+        const toolResults = await executeToolCallsInParallel(streamState.toolCalls, mcpService, logger, traceContext);
 
         // Track tool calls and emit each result
         streamState.toolCalls.forEach((toolCall, index) => {

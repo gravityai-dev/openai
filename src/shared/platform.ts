@@ -11,16 +11,13 @@ function getDeps() {
 // Export CallbackNode for stateful nodes
 export const CallbackNode = getDeps().CallbackNode;
 
-export const getNodeCredentials = (context: any, credentialName: string) => 
+export const getNodeCredentials = (context: any, credentialName: string) =>
   getDeps().getNodeCredentials(context, credentialName);
-export const saveTokenUsage = (usage: any) => 
-  getDeps().saveTokenUsage(usage);
-export const createLogger = (name: string) => 
-  getDeps().createLogger(name);
-export const getConfig = () => 
-  getDeps().getConfig();
-export const getRedisClient = () => 
-  getDeps().getRedisClient();
+export const saveTokenUsage = (usage: any) => getDeps().saveTokenUsage(usage);
+export const saveMCPTrace = (trace: any) => getDeps().saveMCPTrace(trace);
+export const createLogger = (name: string) => getDeps().createLogger(name);
+export const getConfig = () => getDeps().getConfig();
+export const getRedisClient = () => getDeps().getRedisClient();
 
 // Create shared loggers lazily
 let _openAILogger: any;
