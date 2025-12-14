@@ -44,10 +44,9 @@ export async function streamCompletionCallback(
       workflowId: executionContext?.workflow?.id,
     });
 
-    // Step 1: Discover MCP tools if available
-    // Note: mcpDiscoveryQuery is no longer used - MCPs are discovered generically
+    // Step 1: Discover MCP tools using user query for semantic relevance
     logger.info("🔍🔍🔍 [BEFORE MCP DISCOVERY] About to call discoverMCPTools");
-    const mcpConfig = await discoverMCPTools(executionContext, logger);
+    const mcpConfig = await discoverMCPTools(executionContext, logger, config.prompt);
     logger.info("✅✅✅ [AFTER MCP DISCOVERY] discoverMCPTools returned:", {
       hasConfig: !!mcpConfig,
       toolCount: mcpConfig?.tools?.length || 0,

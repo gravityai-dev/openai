@@ -12,15 +12,19 @@ export interface MCPToolConfig {
 
 /**
  * Discover MCP services and convert to OpenAI tools format
- * MCPs are discovered generically - LLM decides which to use based on user query
+ * MCPs are discovered using user query for semantic relevance
  */
-export async function discoverMCPTools(executionContext: any, logger: any): Promise<MCPToolConfig | null> {
+export async function discoverMCPTools(
+  executionContext: any,
+  logger: any,
+  userQuery?: string
+): Promise<MCPToolConfig | null> {
   logger.info("\n\n🔍🔍🔍 [MCP DISCOVERY FUNCTION] discoverMCPTools CALLED");
   logger.info("🔍 [MCP Discovery] Starting tool discovery", {
     hasExecutionContext: !!executionContext,
-    contextKeys: executionContext ? Object.keys(executionContext) : []
+    contextKeys: executionContext ? Object.keys(executionContext) : [],
   });
-  
+
   if (!executionContext) {
     logger.warn("❌❌❌ [MCP DISCOVERY FAILED] No executionContext provided");
     logger.warn("⚠️ [MCP Discovery] No executionContext provided - cannot discover MCP tools");
@@ -33,7 +37,7 @@ export async function discoverMCPTools(executionContext: any, logger: any): Prom
   try {
     logger.info("✅ [MCP Discovery] Checking for MCP service connections...", {
       hasCallService: !!platformDeps.callService,
-      callServiceType: typeof platformDeps.callService
+      callServiceType: typeof platformDeps.callService,
     });
 
     if (!platformDeps.callService) {
@@ -42,10 +46,16 @@ export async function discoverMCPTools(executionContext: any, logger: any): Prom
     }
     logger.info("✅ [MCP DISCOVERY] callService is available");
 
-    // Get MCP schema (generic discovery - no user query)
-    logger.info("📞📞📞 [CALLING getSchema] About to call platformDeps.callService...");
-    const mcpSchema = await platformDeps.callService("getSchema", {}, executionContext);
-    logger.info("✅✅✅ [getSchema RETURNED] Schema received:", { hasSchema: !!mcpSchema, hasMethods: !!mcpSchema?.methods, methodCount: mcpSchema?.methods ? Object.keys(mcpSchema.methods).length : 0 });
+    // Get MCP schema - pass user query for semantic MCP discovery
+    logger.info("📞📞📞 [CALLING getSchema] About to call platformDeps.callService...", {
+      hasUserQuery: !!userQuery,
+    });
+    const mcpSchema = await platformDeps.callService("getSchema", { query: userQuery }, executionContext);
+    logger.info("✅✅✅ [getSchema RETURNED] Schema received:", {
+      hasSchema: !!mcpSchema,
+      hasMethods: !!mcpSchema?.methods,
+      methodCount: mcpSchema?.methods ? Object.keys(mcpSchema.methods).length : 0,
+    });
 
     if (!mcpSchema?.methods) {
       logger.warn("❌❌❌ [NO METHODS] mcpSchema.methods is empty or undefined");
