@@ -191,6 +191,12 @@ export async function runConversationLoop(config: ConversationConfig): Promise<C
         // Execute all tool calls in parallel (with telemetry tracing if context provided)
         const toolResults = await executeToolCallsInParallel(streamState.toolCalls, mcpService, logger, traceContext);
 
+        // Check if any tool is a workflow MCP (not searchKnowledgeBase)
+        // Workflow MCPs manage their own response - we should end the conversation
+        const hasWorkflowMCP = streamState.toolCalls.some(
+          (tc) => tc.function.name !== "searchKnowledgeBase" && tc.function.name !== "getChunksByQuery"
+        );
+
         // Track tool calls and emit each result
         streamState.toolCalls.forEach((toolCall, index) => {
           // Parse the result back to JSON object for cleaner output
@@ -215,28 +221,37 @@ export async function runConversationLoop(config: ConversationConfig): Promise<C
           emitMcpResult(mcpResult);
         });
 
-        // Save response ID for next iteration
-        previousResponseId = streamState.responseId;
+        // If a workflow MCP was called, end the conversation - the workflow manages its own response
+        if (hasWorkflowMCP) {
+          logger.info(`🎯 Workflow MCP detected - ending conversation loop (workflow will manage response)`);
+          conversationComplete = true;
+          // Don't add function_call_output or continue iterating
+          // The workflow will send its response directly to the chat
+        } else {
+          // Only searchKnowledgeBase was called - continue conversation with results
+          // Save response ID for next iteration
+          previousResponseId = streamState.responseId;
 
-        // When using previous_response_id, the API automatically includes ALL output items
-        // from that response (reasoning, function_calls, messages, etc.)
-        // We ONLY need to add the function_call_output items
-        logger.info(
-          `📤 Using previous_response_id: ${previousResponseId} (auto-includes ${streamState.outputItems.length} output items)`
-        );
+          // When using previous_response_id, the API automatically includes ALL output items
+          // from that response (reasoning, function_calls, messages, etc.)
+          // We ONLY need to add the function_call_output items
+          logger.info(
+            `📤 Using previous_response_id: ${previousResponseId} (auto-includes ${streamState.outputItems.length} output items)`
+          );
 
-        // Add function call outputs only
-        for (let i = 0; i < toolResults.length; i++) {
-          inputItems.push({
-            type: "function_call_output",
-            call_id: streamState.toolCalls[i].id,
-            output: toolResults[i].content,
-          });
+          // Add function call outputs only
+          for (let i = 0; i < toolResults.length; i++) {
+            inputItems.push({
+              type: "function_call_output",
+              call_id: streamState.toolCalls[i].id,
+              output: toolResults[i].content,
+            });
+          }
+
+          logger.info(`📤 Added ${toolResults.length} function_call_output items for next iteration`);
+
+          // Continue conversation - loop will iterate again
         }
-
-        logger.info(`📤 Added ${toolResults.length} function_call_output items for next iteration`);
-
-        // Continue conversation - loop will iterate again
       } else {
         // Tools were requested but no MCP service is connected.
         // Instruct the model to answer directly without tools and continue the loop.
