@@ -14,9 +14,11 @@ export interface OpenAIStreamConfig {
   redisChannel: string;
   history?: OpenAIMessage[];
 
-  // GPT-5 Responses API parameters
-  reasoningEffort?: "minimal" | "low" | "medium" | "high";
-  reasoningSummary?: "auto" | "detailed"; // Control reasoning summary generation
+  // GPT-5.2 Responses API parameters
+  // GPT-5.2: "none", "low", "medium", "high", "xhigh"
+  // GPT-5-mini/nano: "minimal", "low", "medium", "high"
+  reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
+  reasoningSummary?: "auto" | "concise" | "detailed"; // Control reasoning summary generation
   verbosity?: "low" | "medium" | "high";
   enablePreambles?: boolean; // Auto-inject preamble instruction
   enableMarkdown?: boolean; // Auto-inject Markdown formatting instruction

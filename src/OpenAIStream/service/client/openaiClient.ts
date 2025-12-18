@@ -1,5 +1,5 @@
 /**
- * OpenAI Client Setup (GPT-5 Responses API Only)
+ * OpenAI Client Setup (GPT-5.2 Responses API)
  * Handles client initialization and input item building
  */
 
@@ -128,19 +128,29 @@ export function buildStreamParams(config: OpenAIStreamConfig, inputItems: Respon
     streamParams.previous_response_id = config.previousResponseId;
   }
 
-  // Add reasoning effort (GPT-5 only)
-  // Default to medium effort and auto summary
-  // Note: "auto" may result in no summary for simple queries with low effort
-  // Use "concise" or "detailed" to force reasoning summaries
-  const reasoningEffort = config.reasoningEffort || "medium";
-  const reasoningSummary = config.reasoningSummary || "auto";
+  // Add reasoning effort (GPT-5.2)
+  // GPT-5.2 supports: "none", "low", "medium", "high", "xhigh"
+  // GPT-5-mini/nano only support: "minimal", "low", "medium", "high"
+  const isGpt52 = config.model?.startsWith("gpt-5.2");
+  let reasoningEffort = config.reasoningEffort || (isGpt52 ? "none" : "minimal");
+
+  // Map GPT-5.2 specific values to compatible values for older models
+  if (!isGpt52) {
+    if (reasoningEffort === "none") {
+      reasoningEffort = "minimal";
+    } else if (reasoningEffort === "xhigh") {
+      reasoningEffort = "high";
+    }
+  }
+
+  const reasoningSummary = config.reasoningSummary || "concise";
 
   streamParams.reasoning = {
     effort: reasoningEffort,
     summary: reasoningSummary,
   };
 
-  // Text format and verbosity for output (GPT-5)
+  // Text format and verbosity for output (GPT-5.2)
   streamParams.text = {
     format: {
       type: "text",
@@ -155,12 +165,12 @@ export function buildStreamParams(config: OpenAIStreamConfig, inputItems: Respon
   // Add tools if available
   if (tools && tools.length > 0) {
     streamParams.tools = tools;
-    
+
     // tool_choice is set dynamically in conversationLoop:
     // - iteration 1: "required" (force knowledge base search)
     // - iteration 2+: "auto" (allow model to respond with text)
     // Do NOT set it here - let conversationLoop control it
-    
+
     // Limit to one tool call per turn for predictable behavior
     // This prevents the model from calling multiple tools simultaneously
     streamParams.parallel_tool_calls = false;

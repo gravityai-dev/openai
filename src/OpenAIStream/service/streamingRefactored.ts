@@ -169,11 +169,11 @@ export async function streamCompletionCallback(
     );
 
     // Emit final output with complete text
-    // Include 'chunk' with final text so streaming components get the complete text
-    // Note: mcpResult is emitted incrementally as each tool call completes
+    // Note: 'chunk' must be included for workflow routing to downstream nodes
+    // mcpResult is emitted incrementally as each tool call completes
     const finalOutput = {
       __outputs: {
-        chunk: result.fullText, // Final chunk = complete text for streaming consumers
+        chunk: result.fullText, // Required for workflow routing
         text: result.fullText,
         reasoning: result.reasoning || undefined,
       },

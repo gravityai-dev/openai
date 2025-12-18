@@ -11,7 +11,7 @@ export function createNodeDefinition(): EnhancedNodeDefinition {
   const { NodeInputType } = getPlatformDependencies();
 
   return {
-    packageVersion: "1.1.3",
+    packageVersion: "1.1.4",
     type: "OpenAI",
     isService: false,
     name: "OpenAI",
